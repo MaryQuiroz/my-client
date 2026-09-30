@@ -24,8 +24,32 @@ type ScoreState =
   | { status: 'done'; totalScore: number; breakdown: SignalBreakdown[]; scoreId: string }
   | { status: 'error'; message: string }
 
+type PipelineState =
+  | { status: 'idle' }
+  | { status: 'adding' }
+  | { status: 'done'; alreadyExisted: boolean }
+  | { status: 'error' }
+
 export default function BusinessCard({ business }: BusinessCardProps) {
   const [scoreState, setScoreState] = useState<ScoreState>({ status: 'idle' })
+  const [pipelineState, setPipelineState] = useState<PipelineState>({ status: 'idle' })
+
+  async function handleAddPipeline() {
+    if (!business.businessId) return
+    setPipelineState({ status: 'adding' })
+    try {
+      const res = await fetch('/api/prospects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ businessId: business.businessId }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setPipelineState({ status: 'error' }); return }
+      setPipelineState({ status: 'done', alreadyExisted: !data.created })
+    } catch {
+      setPipelineState({ status: 'error' })
+    }
+  }
 
   const hasWebsite = !!business.websiteUrl
   const ratingText =
@@ -135,15 +159,24 @@ export default function BusinessCard({ business }: BusinessCardProps) {
           </>
         )}
 
-        <Button
-          size="sm"
-          variant="outline"
-          disabled
-          className="w-full"
-          title="Disponible en Fase 7 — Pipeline"
-        >
-          Añadir al pipeline
-        </Button>
+        {business.businessId && pipelineState.status === 'idle' && (
+          <Button size="sm" variant="outline" onClick={handleAddPipeline} className="w-full">
+            Añadir al pipeline
+          </Button>
+        )}
+        {pipelineState.status === 'adding' && (
+          <p className="text-xs text-zinc-400 animate-pulse text-center py-1">Añadiendo…</p>
+        )}
+        {pipelineState.status === 'done' && (
+          <a href="/pipeline" className="block w-full text-center text-xs text-blue-600 hover:underline py-1">
+            {pipelineState.alreadyExisted ? 'Ya en pipeline — ver' : '¡Añadido! Ver pipeline'}
+          </a>
+        )}
+        {pipelineState.status === 'error' && (
+          <Button size="sm" variant="outline" onClick={handleAddPipeline} className="w-full">
+            Error — reintentar
+          </Button>
+        )}
       </CardContent>
     </Card>
   )
