@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { PostHogProvider } from '@/components/analytics/PostHogProvider'
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Cuadrante' },
@@ -20,6 +21,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!user) redirect('/login')
 
   return (
+    <PostHogProvider userId={user.id} userEmail={user.email}>
     <div className="flex min-h-screen">
       {/* Sidebar */}
       <aside className="w-56 shrink-0 border-r border-zinc-200 bg-white flex flex-col">
@@ -48,6 +50,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <div className="mx-auto max-w-5xl px-6 py-8">{children}</div>
       </main>
     </div>
+    </PostHogProvider>
   )
 }
 

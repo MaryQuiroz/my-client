@@ -5,6 +5,7 @@ import { getPlacesProvider } from '@/lib/places'
 import { searchSchema } from '@/lib/validations/search'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { checkQuota } from '@/lib/quota'
+import { captureEvent } from '@/lib/analytics/posthog-server'
 import type { PlaceResult } from '@/lib/places/types'
 import type { BusinessInsert } from '@/types/database'
 
@@ -110,6 +111,8 @@ export async function POST(request: NextRequest) {
       provider: 'google',
     },
   })
+
+  void captureEvent(user.id, 'search_performed', { results_count: results.length })
 
   // 9. Devolver resultados con businessId y flag alreadySaved
   const response = results.map((r) => ({

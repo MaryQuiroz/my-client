@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type Stripe from 'stripe'
 import type { Database, Json, PlanStatus } from '@/types/database'
 import { priceIdToPlan } from './config'
+import { captureEvent } from '@/lib/analytics/posthog-server'
 
 export type EventResult = { processed: true; action: string } | { skipped: true }
 
@@ -39,6 +40,8 @@ export async function processStripeEvent(
       const subscriptionId = session.subscription as string
 
       if (!userId || !plan) return { processed: true, action: 'ignored:no-metadata' }
+
+      void captureEvent(userId, 'plan_upgraded', { plan })
 
       await adminClient.from('subscriptions').upsert(
         {

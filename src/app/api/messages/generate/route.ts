@@ -5,6 +5,7 @@ import { checkRateLimit } from '@/lib/rate-limit'
 import { messageRequestSchema } from '@/lib/validations/message'
 import { generateMessage } from '@/lib/messages/generator'
 import { checkQuota } from '@/lib/quota'
+import { captureEvent } from '@/lib/analytics/posthog-server'
 import type { SignalBreakdown } from '@/lib/scoring/scorer'
 
 export async function POST(request: NextRequest) {
@@ -159,6 +160,8 @@ export async function POST(request: NextRequest) {
     action: 'message',
     metadata: { business_id: businessId, channel, message_id: savedMessage.id },
   })
+
+  void captureEvent(user.id, 'message_generated', { channel })
 
   return NextResponse.json({
     messageId: savedMessage.id,

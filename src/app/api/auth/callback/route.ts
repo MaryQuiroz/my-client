@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { captureEvent } from '@/lib/analytics/posthog-server'
 
 // Intercambia el código de Supabase Auth (magic link) por una sesión
 export async function GET(request: Request) {
@@ -25,6 +26,7 @@ export async function GET(request: Request) {
           .single()
 
         if (!profile || !profile.onboarding_completed) {
+          void captureEvent(user.id, 'user_signed_up')
           return NextResponse.redirect(`${origin}/onboarding`)
         }
       }

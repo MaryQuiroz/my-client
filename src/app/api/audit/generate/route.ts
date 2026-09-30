@@ -6,6 +6,7 @@ import { auditRequestSchema } from '@/lib/validations/audit'
 import { getRecommendations } from '@/lib/audit/recommendations'
 import { generateAuditPDF } from '@/lib/audit/generator'
 import { checkQuota } from '@/lib/quota'
+import { captureEvent } from '@/lib/analytics/posthog-server'
 import type { SignalBreakdown } from '@/lib/scoring/scorer'
 
 export async function POST(request: NextRequest) {
@@ -137,6 +138,8 @@ export async function POST(request: NextRequest) {
   const { data: signedData } = await admin.storage
     .from('audit-pdfs')
     .createSignedUrl(storagePath, 3600)
+
+  void captureEvent(user.id, 'audit_generated')
 
   return NextResponse.json({
     auditId,
