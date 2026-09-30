@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import ScoreBreakdown from './ScoreBreakdown'
 import AuditButton from './AuditButton'
+import MessageGenerator from './MessageGenerator'
 import type { SearchResult } from './SearchForm'
 import type { SignalBreakdown } from '@/lib/scoring/scorer'
 
@@ -127,6 +128,9 @@ export default function BusinessCard({ business }: BusinessCardProps) {
             />
             {business.businessId && (
               <AuditButton businessId={business.businessId} scoreId={scoreState.scoreId} />
+            )}
+            {business.businessId && (
+              <MessageGenerator businessId={business.businessId} scoreId={scoreState.scoreId} />
             )}
           </>
         )}
