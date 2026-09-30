@@ -32,7 +32,7 @@
     "posthog-js": "^1.435.3",
     "posthog-node": "^5.54.1",
     "react": "19.2.8",
-    "react-dom": "19.2.8",
+    "react-dom": "19.3.0",
     "react-hook-form": "^7.89.0",
     "react-leaflet": "^5.0.0",
     "shadcn": "^4.21.0",
