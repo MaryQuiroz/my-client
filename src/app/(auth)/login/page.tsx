@@ -98,7 +98,12 @@ export default function LoginPage() {
             Crear cuenta
           </Link>
         </p>
-        {/* TODO-LEGAL: añadir enlace a política de privacidad (Fase 13) */}
+        <p className="mt-3 text-center text-xs text-zinc-400">
+          Al acceder aceptas los{' '}
+          <Link href="/legal/terminos" className="underline hover:text-zinc-600">Términos</Link>
+          {' '}y la{' '}
+          <Link href="/legal/privacidad" className="underline hover:text-zinc-600">Política de privacidad</Link>.
+        </p>
       </CardContent>
     </Card>
   )
