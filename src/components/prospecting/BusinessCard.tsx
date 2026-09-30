@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import ScoreBreakdown from './ScoreBreakdown'
+import AuditButton from './AuditButton'
 import type { SearchResult } from './SearchForm'
 import type { SignalBreakdown } from '@/lib/scoring/scorer'
 
@@ -19,7 +20,7 @@ interface BusinessCardProps {
 type ScoreState =
   | { status: 'idle' }
   | { status: 'calculating' }
-  | { status: 'done'; totalScore: number; breakdown: SignalBreakdown[] }
+  | { status: 'done'; totalScore: number; breakdown: SignalBreakdown[]; scoreId: string }
   | { status: 'error'; message: string }
 
 export default function BusinessCard({ business }: BusinessCardProps) {
@@ -57,6 +58,7 @@ export default function BusinessCard({ business }: BusinessCardProps) {
         status: 'done',
         totalScore: data.score.total_score,
         breakdown: data.score.breakdown,
+        scoreId: data.score.id,
       })
     } catch {
       setScoreState({ status: 'error', message: 'Error de conexión' })
@@ -118,10 +120,15 @@ export default function BusinessCard({ business }: BusinessCardProps) {
         )}
 
         {scoreState.status === 'done' && (
-          <ScoreBreakdown
-            totalScore={scoreState.totalScore}
-            breakdown={scoreState.breakdown}
-          />
+          <>
+            <ScoreBreakdown
+              totalScore={scoreState.totalScore}
+              breakdown={scoreState.breakdown}
+            />
+            {business.businessId && (
+              <AuditButton businessId={business.businessId} scoreId={scoreState.scoreId} />
+            )}
+          </>
         )}
 
         <Button
