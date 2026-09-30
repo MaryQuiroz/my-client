@@ -2,21 +2,66 @@
 // para comunicaciones relacionadas con el servicio ofrecido. Revisar RGPD art. 6.1.f
 // antes de usar estos datos en campañas de prospección masiva.
 
+'use client'
+
+import { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import ScoreBreakdown from './ScoreBreakdown'
 import type { SearchResult } from './SearchForm'
+import type { SignalBreakdown } from '@/lib/scoring/scorer'
 
 interface BusinessCardProps {
   business: SearchResult
 }
 
+type ScoreState =
+  | { status: 'idle' }
+  | { status: 'calculating' }
+  | { status: 'done'; totalScore: number; breakdown: SignalBreakdown[] }
+  | { status: 'error'; message: string }
+
 export default function BusinessCard({ business }: BusinessCardProps) {
+  const [scoreState, setScoreState] = useState<ScoreState>({ status: 'idle' })
+
   const hasWebsite = !!business.websiteUrl
   const ratingText =
     business.googleRating != null
       ? `${business.googleRating.toFixed(1)} ★ (${business.googleReviewsCount ?? 0})`
       : null
+
+  async function handleScore() {
+    if (!business.businessId) return
+    setScoreState({ status: 'calculating' })
+
+    try {
+      const res = await fetch('/api/scoring/score', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessId: business.businessId,
+          googleRating: business.googleRating ?? null,
+          googleReviewsCount: business.googleReviewsCount ?? null,
+        }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        setScoreState({ status: 'error', message: data.error ?? 'Error al calcular' })
+        return
+      }
+
+      setScoreState({
+        status: 'done',
+        totalScore: data.score.total_score,
+        breakdown: data.score.breakdown,
+      })
+    } catch {
+      setScoreState({ status: 'error', message: 'Error de conexión' })
+    }
+  }
 
   return (
     <Card className="transition-shadow hover:shadow-md">
@@ -51,11 +96,39 @@ export default function BusinessCard({ business }: BusinessCardProps) {
           )}
         </div>
 
+        {scoreState.status === 'idle' && business.businessId && (
+          <Button size="sm" variant="outline" onClick={handleScore} className="w-full mt-1">
+            Calcular puntuación
+          </Button>
+        )}
+
+        {scoreState.status === 'calculating' && (
+          <p className="text-xs text-zinc-400 animate-pulse text-center py-1">
+            Calculando…{hasWebsite ? ' (analizando PageSpeed)' : ''}
+          </p>
+        )}
+
+        {scoreState.status === 'error' && (
+          <div className="space-y-1">
+            <p className="text-xs text-red-600">{scoreState.message}</p>
+            <Button size="sm" variant="outline" onClick={handleScore} className="w-full">
+              Reintentar
+            </Button>
+          </div>
+        )}
+
+        {scoreState.status === 'done' && (
+          <ScoreBreakdown
+            totalScore={scoreState.totalScore}
+            breakdown={scoreState.breakdown}
+          />
+        )}
+
         <Button
           size="sm"
           variant="outline"
           disabled
-          className="w-full mt-1"
+          className="w-full"
           title="Disponible en Fase 7 — Pipeline"
         >
           Añadir al pipeline

@@ -91,15 +91,15 @@ export async function POST(request: NextRequest) {
 
   const { data: existing } = await supabase
     .from('businesses')
-    .select('place_id')
+    .select('id, place_id')
     .eq('user_id', user.id)
     .in('place_id', placeIds)
 
-  const savedPlaceIds = new Set((existing ?? []).map((b) => b.place_id))
+  const existingMap = new Map((existing ?? []).map((b) => [b.place_id, b.id]))
 
   // 7. Insertar negocios nuevos (ON CONFLICT → ignorar)
   const newBusinesses: BusinessInsert[] = results
-    .filter((r) => !savedPlaceIds.has(r.placeId))
+    .filter((r) => !existingMap.has(r.placeId))
     .map((r) => ({
       user_id: user.id,
       place_id: r.placeId,
@@ -113,9 +113,14 @@ export async function POST(request: NextRequest) {
     }))
 
   if (newBusinesses.length > 0) {
-    await supabase
+    const { data: inserted } = await supabase
       .from('businesses')
       .upsert(newBusinesses, { onConflict: 'user_id,place_id', ignoreDuplicates: true })
+      .select('id, place_id')
+
+    for (const b of inserted ?? []) {
+      existingMap.set(b.place_id, b.id)
+    }
   }
 
   // 8. Registrar uso (service role — sin RLS)
@@ -130,10 +135,11 @@ export async function POST(request: NextRequest) {
     },
   })
 
-  // 9. Devolver resultados con flag alreadySaved
+  // 9. Devolver resultados con businessId y flag alreadySaved
   const response = results.map((r) => ({
     ...r,
-    alreadySaved: savedPlaceIds.has(r.placeId),
+    businessId: existingMap.get(r.placeId) ?? null,
+    alreadySaved: existingMap.has(r.placeId),
   }))
 
   return NextResponse.json({

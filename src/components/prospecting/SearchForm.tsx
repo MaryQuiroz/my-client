@@ -13,6 +13,7 @@ interface SearchFormProps {
 
 export interface SearchResult {
   placeId: string
+  businessId?: string | null
   name: string
   address: string
   phone?: string
