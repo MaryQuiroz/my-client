@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import UpgradeGate from '@/components/shared/UpgradeGate'
 
 interface AuditButtonProps {
   businessId: string
@@ -13,6 +14,7 @@ type AuditState =
   | { status: 'generating' }
   | { status: 'done'; pdfUrl: string }
   | { status: 'error'; message: string }
+  | { status: 'quota'; used: number; limit: number }
 
 export default function AuditButton({ businessId, scoreId }: AuditButtonProps) {
   const [state, setState] = useState<AuditState>({ status: 'idle' })
@@ -28,6 +30,11 @@ export default function AuditButton({ businessId, scoreId }: AuditButtonProps) {
       })
 
       const data = await res.json()
+
+      if (res.status === 429 && data.used !== undefined) {
+        setState({ status: 'quota', used: data.used as number, limit: data.limit as number })
+        return
+      }
 
       if (!res.ok) {
         setState({ status: 'error', message: data.error ?? 'Error al generar auditoría' })
@@ -70,6 +77,16 @@ export default function AuditButton({ businessId, scoreId }: AuditButtonProps) {
           Reintentar auditoría
         </Button>
       </div>
+    )
+  }
+
+  if (state.status === 'quota') {
+    return (
+      <UpgradeGate allowed={false} used={state.used} limit={state.limit} action="auditoría">
+        <Button size="sm" variant="outline" className="w-full">
+          Generar auditoría PDF
+        </Button>
+      </UpgradeGate>
     )
   }
 

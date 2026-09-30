@@ -5,7 +5,7 @@ import { checkRateLimit } from '@/lib/rate-limit'
 import { auditRequestSchema } from '@/lib/validations/audit'
 import { getRecommendations } from '@/lib/audit/recommendations'
 import { generateAuditPDF } from '@/lib/audit/generator'
-import { PLAN_LIMITS } from '@/lib/stripe/config'
+import { checkQuota } from '@/lib/quota'
 import type { SignalBreakdown } from '@/lib/scoring/scorer'
 
 export async function POST(request: NextRequest) {
@@ -69,34 +69,10 @@ export async function POST(request: NextRequest) {
   }
 
   // 6. Cuota mensual de auditorías
-  const { data: subscription } = await admin
-    .from('subscriptions')
-    .select('plan')
-    .eq('user_id', user.id)
-    .maybeSingle()
-
-  const plan = subscription?.plan ?? 'free'
-  const monthlyLimit = PLAN_LIMITS[plan].auditsPerMonth
-
-  const startOfMonth = new Date()
-  startOfMonth.setDate(1)
-  startOfMonth.setHours(0, 0, 0, 0)
-
-  const { count: usedAudits } = await admin
-    .from('usage_logs')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', user.id)
-    .eq('action', 'audit')
-    .gte('created_at', startOfMonth.toISOString())
-
-  if ((usedAudits ?? 0) >= monthlyLimit) {
+  const quota = await checkQuota(user.id, 'audit', admin)
+  if (!quota.allowed) {
     return NextResponse.json(
-      {
-        error: 'Has alcanzado el límite de auditorías de tu plan.',
-        used: usedAudits,
-        limit: monthlyLimit,
-        plan,
-      },
+      { error: 'Has alcanzado el límite de auditorías de tu plan.', ...quota },
       { status: 429 }
     )
   }

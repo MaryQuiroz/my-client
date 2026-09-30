@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { href: '/pipeline', label: 'Pipeline' },
   { href: '/metrics', label: 'Métricas' },
   { href: '/profile', label: 'Mi perfil' },
+  { href: '/upgrade', label: 'Planes' },
 ]
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {

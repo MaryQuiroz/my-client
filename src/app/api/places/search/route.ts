@@ -4,7 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getPlacesProvider } from '@/lib/places'
 import { searchSchema } from '@/lib/validations/search'
 import { checkRateLimit } from '@/lib/rate-limit'
-import { PLAN_LIMITS } from '@/lib/stripe/config'
+import { checkQuota } from '@/lib/quota'
 import type { PlaceResult } from '@/lib/places/types'
 import type { BusinessInsert } from '@/types/database'
 
@@ -44,34 +44,10 @@ export async function POST(request: NextRequest) {
   // 4. Cuota mensual según plan
   const admin = createAdminClient()
 
-  const { data: subscription } = await admin
-    .from('subscriptions')
-    .select('plan')
-    .eq('user_id', user.id)
-    .maybeSingle()
-
-  const plan = subscription?.plan ?? 'free'
-  const monthlyLimit = PLAN_LIMITS[plan].searchesPerMonth
-
-  const startOfMonth = new Date()
-  startOfMonth.setDate(1)
-  startOfMonth.setHours(0, 0, 0, 0)
-
-  const { count: usedSearches } = await admin
-    .from('usage_logs')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', user.id)
-    .eq('action', 'search')
-    .gte('created_at', startOfMonth.toISOString())
-
-  if ((usedSearches ?? 0) >= monthlyLimit) {
+  const quota = await checkQuota(user.id, 'search', admin)
+  if (!quota.allowed) {
     return NextResponse.json(
-      {
-        error: 'Has alcanzado el límite de búsquedas de tu plan.',
-        used: usedSearches,
-        limit: monthlyLimit,
-        plan,
-      },
+      { error: 'Has alcanzado el límite de búsquedas de tu plan.', ...quota },
       { status: 429 }
     )
   }
@@ -144,6 +120,6 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({
     results: response,
-    quota: { used: (usedSearches ?? 0) + 1, limit: monthlyLimit, plan },
+    quota: { used: quota.used + 1, limit: quota.limit, plan: quota.plan },
   })
 }

@@ -6,6 +6,7 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import UpgradeGate from '@/components/shared/UpgradeGate'
 
 interface MessageGeneratorProps {
   businessId: string
@@ -19,6 +20,7 @@ type GenState =
   | { status: 'generating' }
   | { status: 'done'; messageId: string; content: string; channel: Channel }
   | { status: 'error'; message: string }
+  | { status: 'quota'; used: number; limit: number }
 
 const CHANNEL_LABELS: Record<Channel, string> = {
   whatsapp: 'WhatsApp',
@@ -43,6 +45,11 @@ export default function MessageGenerator({ businessId, scoreId }: MessageGenerat
       })
 
       const data = await res.json()
+
+      if (res.status === 429 && data.used !== undefined) {
+        setState({ status: 'quota', used: data.used as number, limit: data.limit as number })
+        return
+      }
 
       if (!res.ok) {
         setState({ status: 'error', message: data.error ?? 'Error al generar mensaje' })
@@ -92,17 +99,25 @@ export default function MessageGenerator({ businessId, scoreId }: MessageGenerat
         ))}
       </div>
 
-      {/* Botón generar */}
-      {state.status !== 'done' && (
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={handleGenerate}
-          disabled={state.status === 'generating'}
-          className="w-full"
-        >
-          {state.status === 'generating' ? 'Generando…' : 'Generar mensaje'}
-        </Button>
+      {/* Botón generar / gate de cuota */}
+      {state.status === 'quota' ? (
+        <UpgradeGate allowed={false} used={state.used} limit={state.limit} action="mensaje">
+          <Button size="sm" variant="outline" className="w-full">
+            Generar mensaje
+          </Button>
+        </UpgradeGate>
+      ) : (
+        state.status !== 'done' && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleGenerate}
+            disabled={state.status === 'generating'}
+            className="w-full"
+          >
+            {state.status === 'generating' ? 'Generando…' : 'Generar mensaje'}
+          </Button>
+        )
       )}
 
       {/* Error */}

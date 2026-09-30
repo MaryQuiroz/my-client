@@ -5,10 +5,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { searchSchema, type SearchFormData } from '@/lib/validations/search'
+import UpgradeGate from '@/components/shared/UpgradeGate'
+import type { QuotaResult } from '@/lib/quota'
 
 interface SearchFormProps {
   onResults: (results: SearchResult[], quota: QuotaInfo) => void
   onLoading: (loading: boolean) => void
+  searchQuota: QuotaResult
 }
 
 export interface SearchResult {
@@ -31,7 +34,7 @@ export interface QuotaInfo {
   plan: string
 }
 
-export default function SearchForm({ onResults, onLoading }: SearchFormProps) {
+export default function SearchForm({ onResults, onLoading, searchQuota }: SearchFormProps) {
   const [fields, setFields] = useState<SearchFormData>({ query: '', location: '' })
   const [errors, setErrors] = useState<Partial<Record<keyof SearchFormData, string>>>({})
   const [serverError, setServerError] = useState<string | null>(null)
@@ -79,38 +82,46 @@ export default function SearchForm({ onResults, onLoading }: SearchFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4 sm:flex-row sm:items-end">
-      <div className="flex-1 space-y-1">
-        <Label htmlFor="query">Tipo de negocio</Label>
-        <Input
-          id="query"
-          placeholder="ej. peluquería, fontanero, restaurante..."
-          value={fields.query}
-          onChange={(e) => handleChange('query', e.target.value)}
-          aria-invalid={!!errors.query}
-        />
-        {errors.query && <p className="text-xs text-red-600">{errors.query}</p>}
-      </div>
+    <UpgradeGate
+      allowed={searchQuota.allowed}
+      used={searchQuota.used}
+      limit={searchQuota.limit}
+      action="búsqueda"
+      className="rounded-lg"
+    >
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4 sm:flex-row sm:items-end">
+        <div className="flex-1 space-y-1">
+          <Label htmlFor="query">Tipo de negocio</Label>
+          <Input
+            id="query"
+            placeholder="ej. peluquería, fontanero, restaurante..."
+            value={fields.query}
+            onChange={(e) => handleChange('query', e.target.value)}
+            aria-invalid={!!errors.query}
+          />
+          {errors.query && <p className="text-xs text-red-600">{errors.query}</p>}
+        </div>
 
-      <div className="flex-1 space-y-1">
-        <Label htmlFor="location">Zona o ciudad</Label>
-        <Input
-          id="location"
-          placeholder="ej. Barcelona, Madrid centro..."
-          value={fields.location}
-          onChange={(e) => handleChange('location', e.target.value)}
-          aria-invalid={!!errors.location}
-        />
-        {errors.location && <p className="text-xs text-red-600">{errors.location}</p>}
-      </div>
+        <div className="flex-1 space-y-1">
+          <Label htmlFor="location">Zona o ciudad</Label>
+          <Input
+            id="location"
+            placeholder="ej. Barcelona, Madrid centro..."
+            value={fields.location}
+            onChange={(e) => handleChange('location', e.target.value)}
+            aria-invalid={!!errors.location}
+          />
+          {errors.location && <p className="text-xs text-red-600">{errors.location}</p>}
+        </div>
 
-      <Button type="submit" className="shrink-0">
-        Buscar
-      </Button>
+        <Button type="submit" className="shrink-0">
+          Buscar
+        </Button>
 
-      {serverError && (
-        <p className="w-full text-sm text-red-600">{serverError}</p>
-      )}
-    </form>
+        {serverError && (
+          <p className="w-full text-sm text-red-600">{serverError}</p>
+        )}
+      </form>
+    </UpgradeGate>
   )
 }
