@@ -1,11 +1,16 @@
-// Factory de PlacesProvider — implementar en Fase 3
-// Lee PLACES_PROVIDER del entorno y devuelve la implementación correspondiente.
-
 import type { PlacesProvider } from './types'
+import { GooglePlacesProvider } from './google'
 
 export function getPlacesProvider(): PlacesProvider {
-  // TODO (Fase 3): importar y devolver la implementación según process.env.PLACES_PROVIDER
-  throw new Error('getPlacesProvider: no implementado todavía (Fase 3)')
+  const provider = process.env.PLACES_PROVIDER ?? 'google'
+
+  if (provider === 'google') {
+    const apiKey = process.env.GOOGLE_PLACES_API_KEY
+    if (!apiKey) throw new Error('GOOGLE_PLACES_API_KEY no está configurada')
+    return new GooglePlacesProvider(apiKey)
+  }
+
+  throw new Error(`PlacesProvider desconocido: ${provider}`)
 }
 
 export type { PlacesProvider, PlaceResult, SearchParams, ProviderName } from './types'
