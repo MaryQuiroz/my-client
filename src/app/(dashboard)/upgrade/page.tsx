@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { PLAN_LIMITS, type PlanId, type PlanLimits } from '@/lib/stripe/config'
 import { Badge } from '@/components/ui/badge'
+import { CheckoutButton, PortalButton } from '@/components/billing/CheckoutButton'
 
 const PLAN_NAMES: Record<PlanId, string> = {
   free: 'Gratuito',
@@ -10,7 +11,7 @@ const PLAN_NAMES: Record<PlanId, string> = {
   agency: 'Agencia',
 }
 
-// TODO-LEGAL: Precios finales y condiciones con abogado antes de activar pagos (Fase 10)
+// TODO-LEGAL: Precios finales, condiciones de suscripción e IVA con abogado antes de activar modo live
 const PLAN_PRICES: Record<PlanId, string> = {
   free: '0 €/mes',
   pro: '—',
@@ -26,7 +27,11 @@ const FEATURES: { label: string; key: keyof PlanLimits }[] = [
 
 const PLANS: PlanId[] = ['free', 'pro', 'agency']
 
-export default async function UpgradePage() {
+export default async function UpgradePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ success?: string; canceled?: string }>
+}) {
   const supabase = await createClient()
   const {
     data: { user },
@@ -36,11 +41,14 @@ export default async function UpgradePage() {
   const admin = createAdminClient()
   const { data: subscription } = await admin
     .from('subscriptions')
-    .select('plan')
+    .select('plan, stripe_customer_id')
     .eq('user_id', user.id)
     .maybeSingle()
 
   const currentPlan = (subscription?.plan ?? 'free') as PlanId
+  const hasStripeCustomer = !!subscription?.stripe_customer_id
+
+  const params = await searchParams
 
   return (
     <div className="space-y-8 max-w-3xl">
@@ -51,6 +59,18 @@ export default async function UpgradePage() {
           <span className="font-medium text-zinc-700">{PLAN_NAMES[currentPlan]}</span>
         </p>
       </div>
+
+      {params.success === 'true' && (
+        <div className="rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+          Suscripción activada correctamente. Las nuevas cuotas ya están disponibles.
+        </div>
+      )}
+
+      {params.canceled === 'true' && (
+        <div className="rounded-md border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
+          Proceso cancelado. Tu plan no ha cambiado.
+        </div>
+      )}
 
       <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-white">
         <table className="w-full border-collapse text-sm">
@@ -92,9 +112,7 @@ export default async function UpgradePage() {
               {PLANS.map((plan) => (
                 <td
                   key={plan}
-                  className={`px-4 py-3 text-center ${
-                    currentPlan === plan ? 'bg-blue-50/40' : ''
-                  }`}
+                  className={`px-4 py-3 text-center ${currentPlan === plan ? 'bg-blue-50/40' : ''}`}
                 >
                   <span className="font-medium text-zinc-700">{PLAN_PRICES[plan]}</span>
                 </td>
@@ -107,18 +125,18 @@ export default async function UpgradePage() {
               {PLANS.map((plan) => (
                 <td
                   key={plan}
-                  className={`px-4 py-4 text-center ${
-                    currentPlan === plan ? 'bg-blue-50/40' : ''
-                  }`}
+                  className={`px-4 py-4 text-center ${currentPlan === plan ? 'bg-blue-50/40' : ''}`}
                 >
                   {plan === 'free' ? (
                     currentPlan === 'free' ? (
                       <span className="text-xs text-zinc-400">Plan actual</span>
                     ) : null
                   ) : (
-                    <span className="inline-flex items-center rounded-md border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-400">
-                      Próximamente
-                    </span>
+                    <CheckoutButton
+                      plan={plan}
+                      currentPlan={currentPlan}
+                      hasStripeCustomer={hasStripeCustomer}
+                    />
                   )}
                 </td>
               ))}
@@ -127,9 +145,21 @@ export default async function UpgradePage() {
         </table>
       </div>
 
+      {currentPlan !== 'free' && (
+        <section className="space-y-2">
+          <h2 className="text-sm font-semibold text-zinc-700 uppercase tracking-wide">
+            Gestionar suscripción
+          </h2>
+          <p className="text-xs text-zinc-500">
+            Cambia de plan, descarga facturas o cancela desde el portal de Stripe.
+          </p>
+          <PortalButton />
+        </section>
+      )}
+
       <p className="text-xs text-zinc-400">
-        {/* TODO-LEGAL: Precios, condiciones de suscripción e IVA pendientes de revisión legal antes de Fase 10. */}
-        Los planes de pago se activarán próximamente.
+        {/* TODO-LEGAL: Precios definitivos, IVA y TOS pendientes de revisión antes de activar modo live. */}
+        Pagos gestionados de forma segura por Stripe.
       </p>
     </div>
   )

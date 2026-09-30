@@ -33,3 +33,17 @@ export const PLAN_LIMITS: Record<PlanId, PlanLimits> = {
 }
 
 export const DEFAULT_PLAN: PlanId = 'free'
+
+export function getStripePriceIds(): Record<'pro' | 'agency', string> {
+  return {
+    pro: process.env.STRIPE_PRICE_ID_PRO ?? '',
+    agency: process.env.STRIPE_PRICE_ID_AGENCY ?? '',
+  }
+}
+
+export function priceIdToPlan(priceId: string): PlanId {
+  const ids = getStripePriceIds()
+  if (priceId && priceId === ids.pro) return 'pro'
+  if (priceId && priceId === ids.agency) return 'agency'
+  return 'free'
+}
