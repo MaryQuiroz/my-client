@@ -1,13 +1,11 @@
 import { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import dynamic from 'next/dynamic'
 import type { ProspectStatus } from '@/types/database'
 import type { ProspectPin } from '@/components/map/ProspectMap'
+import ProspectMapClient from '@/components/map/ProspectMapClient'
 
 export const metadata: Metadata = { title: 'Mapa de prospectos — My Client' }
-
-const ProspectMap = dynamic(() => import('@/components/map/ProspectMap'), { ssr: false })
 
 const STATUS_COLORS: Record<ProspectStatus, string> = {
   nuevo: '#3b82f6',
@@ -99,7 +97,7 @@ export default async function MapaPage() {
           </p>
         </div>
       ) : (
-        <ProspectMap pins={pins} />
+        <ProspectMapClient pins={pins} />
       )}
     </div>
   )
