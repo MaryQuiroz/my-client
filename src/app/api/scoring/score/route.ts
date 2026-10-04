@@ -59,16 +59,14 @@ export async function POST(request: NextRequest) {
     .select('*')
     .eq('user_id', user.id)
 
-  // 6. PageSpeed si el negocio tiene web
+  // 6. PageSpeed si el negocio tiene web (funciona con o sin API key)
   let pagespeedData = null
   let pagespeedCalled = false
 
   if (business.website) {
-    const apiKey = process.env.GOOGLE_PAGESPEED_API_KEY
-    if (apiKey) {
-      pagespeedCalled = true
-      pagespeedData = await fetchPageSpeed(business.website, apiKey)
-    }
+    pagespeedCalled = true
+    const apiKey = process.env.GOOGLE_PAGESPEED_API_KEY ?? null
+    pagespeedData = await fetchPageSpeed(business.website, apiKey)
   }
 
   // 7. Calcular puntuación

@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
       prospect_id: prospect.id,
       channel,
       content,
-      variant: 0,
+      variant: 1,
       is_followup: false,
     })
     .select('id')

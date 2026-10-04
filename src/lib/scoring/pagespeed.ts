@@ -19,16 +19,15 @@ interface PageSpeedResponse {
 
 export async function fetchPageSpeed(
   url: string,
-  apiKey: string
+  apiKey?: string | null
 ): Promise<PageSpeedData | null> {
   try {
     const params = new URLSearchParams({
       url,
       strategy: 'mobile',
-      key: apiKey,
-      // Solicitar solo las categorías necesarias para reducir tiempo de respuesta
       category: 'performance',
     })
+    if (apiKey) params.set('key', apiKey)
 
     const response = await fetch(
       `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?${params.toString()}`,

@@ -16,7 +16,7 @@ const securityHeaders = [
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: https:",
       // Supabase, PostHog EU y Stripe
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://eu.i.posthog.com https://api.stripe.com",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://eu.i.posthog.com https://eu-assets.i.posthog.com https://api.stripe.com",
       // Stripe Checkout abre en redirección, no iframe — pero por si acaso
       "frame-src 'self' https://js.stripe.com https://hooks.stripe.com",
       "object-src 'none'",
@@ -33,6 +33,7 @@ const securityHeaders = [
 ]
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ['@react-pdf/renderer'],
   async headers() {
     return [
       {

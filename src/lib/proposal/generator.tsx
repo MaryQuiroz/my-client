@@ -1,4 +1,5 @@
-import ReactPDF, {
+import {
+  renderToBuffer,
   Document,
   Page,
   Text,
@@ -297,6 +298,6 @@ function ProposalDocument({ data }: { data: ProposalData }) {
 }
 
 export async function generateProposalPDF(data: ProposalData): Promise<Uint8Array> {
-  const buffer = await ReactPDF.renderToBuffer(<ProposalDocument data={data} />)
+  const buffer = await renderToBuffer(<ProposalDocument data={data} />)
   return new Uint8Array(buffer)
 }

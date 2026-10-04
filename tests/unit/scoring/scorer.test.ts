@@ -19,11 +19,11 @@ const noProblems: ScoreInput = {
 }
 
 describe('scoreBusiness — función pura', () => {
-  it('todos los problemas detectables con pesos default → totalScore = 80', () => {
-    // no_https (15pts) no puede disparar cuando website=null → máximo real = 80
-    // no_website(25) + slow_mobile(20) + not_mobile_friendly(15) + no_booking_or_whatsapp(10) + low_rating(10) = 80
+  it('todos los problemas detectables con pesos default → totalScore = 70', () => {
+    // no_booking_or_whatsapp requiere website presente → no dispara cuando website=null
+    // no_website(25) + slow_mobile(20) + not_mobile_friendly(15) + low_rating(10) = 70
     const { totalScore } = scoreBusiness(allProblems)
-    expect(totalScore).toBe(80)
+    expect(totalScore).toBe(70)
   })
 
   it('ningún problema detectado → totalScore = 0', () => {
@@ -62,12 +62,17 @@ describe('scoreBusiness — función pura', () => {
     expect(httpsSignal?.points).toBe(15)
   })
 
-  it('sin pagespeedData → slow_mobile y not_mobile_friendly ausentes del breakdown', () => {
+  it('sin pagespeedData → slow_mobile y not_mobile_friendly aparecen como N/D', () => {
     const input: ScoreInput = { ...allProblems, pagespeedData: null }
     const { breakdown } = scoreBusiness(input)
-    const signals = breakdown.map((b) => b.signal)
-    expect(signals).not.toContain('slow_mobile')
-    expect(signals).not.toContain('not_mobile_friendly')
+    const slowMobile = breakdown.find((b) => b.signal === 'slow_mobile')
+    const mobileFriendly = breakdown.find((b) => b.signal === 'not_mobile_friendly')
+    expect(slowMobile?.source).toBe('unavailable')
+    expect(slowMobile?.fired).toBe(false)
+    expect(slowMobile?.points).toBe(0)
+    expect(mobileFriendly?.source).toBe('unavailable')
+    expect(mobileFriendly?.fired).toBe(false)
+    expect(mobileFriendly?.points).toBe(0)
   })
 
   it('peso de usuario 0 → señal aporta 0 pts aunque dispare', () => {
@@ -134,17 +139,43 @@ describe('scoreBusiness — función pura', () => {
     }
   })
 
-  it('low_rating dispara con nota < 4.0', () => {
-    const input: ScoreInput = { ...noProblems, googleRating: 3.9 }
+  it('low_rating dispara con nota < 4.2', () => {
+    const input: ScoreInput = { ...noProblems, googleRating: 4.1 }
     const { breakdown } = scoreBusiness(input)
     const signal = breakdown.find((b) => b.signal === 'low_rating')
     expect(signal?.fired).toBe(true)
   })
 
-  it('low_rating dispara con menos de 10 reseñas', () => {
-    const input: ScoreInput = { ...noProblems, googleRating: 4.5, googleReviewsCount: 5 }
+  it('low_rating no dispara con nota >= 4.2 y reseñas >= 20', () => {
+    const input: ScoreInput = { ...noProblems, googleRating: 4.2, googleReviewsCount: 20 }
+    const { breakdown } = scoreBusiness(input)
+    const signal = breakdown.find((b) => b.signal === 'low_rating')
+    expect(signal?.fired).toBe(false)
+  })
+
+  it('low_rating dispara con menos de 20 reseñas', () => {
+    const input: ScoreInput = { ...noProblems, googleRating: 4.5, googleReviewsCount: 15 }
     const { breakdown } = scoreBusiness(input)
     const signal = breakdown.find((b) => b.signal === 'low_rating')
     expect(signal?.fired).toBe(true)
+  })
+
+  it('no_booking_or_whatsapp dispara con web presente y sin teléfono', () => {
+    const input: ScoreInput = {
+      ...noProblems,
+      website: 'https://ejemplo.com',
+      phone: null,
+    }
+    const { breakdown } = scoreBusiness(input)
+    const signal = breakdown.find((b) => b.signal === 'no_booking_or_whatsapp')
+    expect(signal?.fired).toBe(true)
+    expect(signal?.points).toBe(10)
+  })
+
+  it('no_booking_or_whatsapp no dispara sin web (cubierto por no_website)', () => {
+    const input: ScoreInput = { ...allProblems, website: null, phone: null }
+    const { breakdown } = scoreBusiness(input)
+    const signal = breakdown.find((b) => b.signal === 'no_booking_or_whatsapp')
+    expect(signal?.fired).toBe(false)
   })
 })

@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic'
 import { useState } from 'react'
 import SearchForm, { type SearchResult, type QuotaInfo } from '@/components/prospecting/SearchForm'
+import { hasOwnWebsite } from '@/lib/scoring/aggregators'
 import BusinessCard from '@/components/prospecting/BusinessCard'
 import AddManualForm from '@/components/prospecting/AddManualForm'
 import ImportCsvForm from '@/components/prospecting/ImportCsvForm'
@@ -35,8 +36,18 @@ export default function ProspectingClient({ initialSearchQuota }: ProspectingCli
   const [hasSearched, setHasSearched] = useState(false)
   const [importMessage, setImportMessage] = useState<string | null>(null)
 
+  function sortByOpportunity(data: SearchResult[]): SearchResult[] {
+    return [...data].sort((a, b) => {
+      const aOwn = hasOwnWebsite(a.websiteUrl) ? 1 : 0
+      const bOwn = hasOwnWebsite(b.websiteUrl) ? 1 : 0
+      if (aOwn !== bOwn) return aOwn - bOwn // sin web propia primero
+      // Dentro del mismo grupo: más reseñas primero (más establecido = mejor objetivo)
+      return (b.googleReviewsCount ?? 0) - (a.googleReviewsCount ?? 0)
+    })
+  }
+
   function handleResults(data: SearchResult[], q: QuotaInfo) {
-    setResults(data)
+    setResults(sortByOpportunity(data))
     setSearchQuota({
       allowed: q.used < q.limit,
       used: q.used,
@@ -108,9 +119,9 @@ export default function ProspectingClient({ initialSearchQuota }: ProspectingCli
                 Mapa
               </Button>
             </div>
-            {results.filter((r) => !r.websiteUrl).length > 0 && (
+            {results.filter((r) => !hasOwnWebsite(r.websiteUrl)).length > 0 && (
               <Badge variant="destructive">
-                {results.filter((r) => !r.websiteUrl).length} sin web
+                {results.filter((r) => !hasOwnWebsite(r.websiteUrl)).length} sin web propia
               </Badge>
             )}
           </div>

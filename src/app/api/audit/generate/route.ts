@@ -92,15 +92,24 @@ export async function POST(request: NextRequest) {
   const recommendations = getRecommendations(breakdown)
   const generatedAt = new Date().toISOString()
 
-  const pdfBytes = await generateAuditPDF({
-    businessName: business.name,
-    address: business.address ?? '',
-    totalScore: score.total_score,
-    breakdown,
-    recommendations,
-    freelancerName,
-    generatedAt,
-  })
+  let pdfBytes: Uint8Array
+  try {
+    pdfBytes = await generateAuditPDF({
+      businessName: business.name,
+      address: business.address ?? '',
+      totalScore: score.total_score,
+      breakdown,
+      recommendations,
+      freelancerName,
+      generatedAt,
+    })
+  } catch (pdfError) {
+    console.error('[audit/generate] PDF generation failed:', pdfError)
+    return NextResponse.json(
+      { error: 'Error al generar el PDF. Inténtalo de nuevo.' },
+      { status: 500 }
+    )
+  }
 
   // 9. Subir a Supabase Storage
   const auditId = crypto.randomUUID()

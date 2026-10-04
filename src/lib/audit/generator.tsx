@@ -1,4 +1,5 @@
-import ReactPDF, {
+import {
+  renderToBuffer,
   Document,
   Page,
   Text,
@@ -200,6 +201,6 @@ function AuditDocument({ data }: { data: AuditData }) {
 }
 
 export async function generateAuditPDF(data: AuditData): Promise<Uint8Array> {
-  const buffer = await ReactPDF.renderToBuffer(<AuditDocument data={data} />)
+  const buffer = await renderToBuffer(<AuditDocument data={data} />)
   return new Uint8Array(buffer)
 }

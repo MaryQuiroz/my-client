@@ -1,4 +1,5 @@
 import { DEFAULT_SIGNAL_CONFIG, type SignalKey, type SignalConfig } from './config'
+import { isAggregatorUrl } from './aggregators'
 import type { SignalWeight } from '@/types/database'
 
 export interface PageSpeedData {
@@ -68,11 +69,20 @@ export function scoreBusiness(
       continue
     }
 
-    // Señales que dependen de PageSpeed — omitir si no hay datos
+    // Señales que dependen de PageSpeed — marcar N/D si no hay datos
     if (
       (signal.key === 'slow_mobile' || signal.key === 'not_mobile_friendly') &&
       input.pagespeedData == null
     ) {
+      breakdown.push({
+        signal: signal.key,
+        label: signal.label,
+        fired: false,
+        points: 0,
+        maxPoints: Math.round(weightedMax),
+        source: 'unavailable',
+        measuredAt: now,
+      })
       continue
     }
 
@@ -81,26 +91,29 @@ export function scoreBusiness(
 
     switch (signal.key) {
       case 'no_website':
-        fired = !input.website
+        // Dispara si no hay web O si la URL es un agregador/red social (no es web propia)
+        fired = !input.website || isAggregatorUrl(input.website)
         break
 
       case 'no_https':
-        fired = !!input.website && !input.website.startsWith('https://')
+        // Solo aplica si tiene web propia (no agregador)
+        fired = !!input.website && !isAggregatorUrl(input.website) && !input.website.startsWith('https://')
         break
 
       case 'no_booking_or_whatsapp':
-        fired = !input.website && !input.phone
+        // Tiene web pero no tiene teléfono → sin contacto directo visible
+        fired = !!input.website && !input.phone
         break
 
       case 'low_rating':
         fired =
-          (input.googleRating != null && input.googleRating < 4.0) ||
-          (input.googleReviewsCount != null && input.googleReviewsCount < 10)
+          (input.googleRating != null && input.googleRating < 4.2) ||
+          (input.googleReviewsCount != null && input.googleReviewsCount < 20)
         break
 
       case 'slow_mobile':
         source = 'pagespeed'
-        fired = (input.pagespeedData?.performanceScore ?? 100) < 50
+        fired = (input.pagespeedData?.performanceScore ?? 100) < 75
         break
 
       case 'not_mobile_friendly':

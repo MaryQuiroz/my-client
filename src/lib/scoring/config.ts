@@ -30,7 +30,7 @@ export const DEFAULT_SIGNAL_CONFIG: SignalConfig[] = [
   {
     key: 'slow_mobile',
     label: 'Web lenta en móvil',
-    description: 'PageSpeed Insights puntúa por debajo de 50 en móvil',
+    description: 'PageSpeed Insights puntúa por debajo de 75 en móvil (necesita mejora)',
     defaultWeight: 0.8,
     maxScore: 20,
   },
@@ -50,15 +50,15 @@ export const DEFAULT_SIGNAL_CONFIG: SignalConfig[] = [
   },
   {
     key: 'no_booking_or_whatsapp',
-    label: 'Sin reserva ni WhatsApp',
-    description: 'No tiene sistema de reserva online ni botón de WhatsApp visible',
+    label: 'Sin teléfono ni contacto',
+    description: 'Tiene web pero no tiene teléfono visible en Google Maps (sin WhatsApp ni contacto directo)',
     defaultWeight: 0.6,
     maxScore: 10,
   },
   {
     key: 'low_rating',
-    label: 'Nota baja en Google',
-    description: 'Nota media inferior a 4.0 o menos de 10 reseñas en Google',
+    label: 'Pocas reseñas o nota baja',
+    description: 'Nota media inferior a 4.2 o menos de 20 reseñas (negocio sin visibilidad suficiente)',
     defaultWeight: 0.5,
     maxScore: 10,
   },
