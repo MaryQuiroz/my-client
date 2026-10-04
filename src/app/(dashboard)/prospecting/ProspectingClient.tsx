@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic'
 import { useState } from 'react'
 import SearchForm, { type SearchResult, type QuotaInfo } from '@/components/prospecting/SearchForm'
 import BusinessCard from '@/components/prospecting/BusinessCard'
+import AddManualForm from '@/components/prospecting/AddManualForm'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import type { QuotaResult } from '@/lib/quota'
@@ -43,6 +44,14 @@ export default function ProspectingClient({ initialSearchQuota }: ProspectingCli
     setHasSearched(true)
   }
 
+  function handleManualAdded(result: SearchResult) {
+    setResults((prev) => {
+      const exists = prev.some((r) => r.placeId === result.placeId)
+      return exists ? prev : [result, ...prev]
+    })
+    setHasSearched(true)
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
@@ -50,6 +59,8 @@ export default function ProspectingClient({ initialSearchQuota }: ProspectingCli
       </div>
 
       <SearchForm onResults={handleResults} onLoading={setLoading} searchQuota={searchQuota} />
+
+      <AddManualForm onAdded={handleManualAdded} />
 
       {loading && (
         <p className="text-sm text-zinc-500 animate-pulse">Buscando negocios…</p>
