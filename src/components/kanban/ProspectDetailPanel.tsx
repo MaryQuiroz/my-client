@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 // El componente recibe key={prospect.id} desde el padre — remonta al cambiar prospecto
 import type { ProspectWithBusiness } from '@/lib/kanban/utils'
 import RoiCalculator from '@/components/shared/RoiCalculator'
+import ProposalButton from '@/components/kanban/ProposalButton'
 
 interface ProspectDetailPanelProps {
   prospect: ProspectWithBusiness
@@ -141,6 +142,12 @@ export default function ProspectDetailPanel({
               </p>
             )}
           </div>
+
+          {/* Propuesta comercial */}
+          <ProposalButton
+            businessId={prospect.business.id}
+            businessName={prospect.business.name}
+          />
 
           {/* Próximo contacto */}
           <div className="space-y-1.5">
