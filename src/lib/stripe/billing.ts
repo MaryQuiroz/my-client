@@ -2,7 +2,7 @@
 import { getStripeClient } from './client'
 import { getStripePriceIds } from './config'
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://my-client-orcin.vercel.app'
 
 export async function createCheckoutSession(params: {
   userId: string
