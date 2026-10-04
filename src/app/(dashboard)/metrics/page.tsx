@@ -22,6 +22,61 @@ const PROSPECT_COLORS: Record<ProspectStatus, string> = {
   perdido: 'bg-red-100 text-red-700',
 }
 
+const FUNNEL_STAGES: { status: ProspectStatus; label: string; color: string }[] = [
+  { status: 'nuevo', label: 'Nuevo', color: 'bg-blue-200' },
+  { status: 'contactado', label: 'Contactado', color: 'bg-blue-400' },
+  { status: 'respondio', label: 'Respondió', color: 'bg-indigo-400' },
+  { status: 'reunion', label: 'Reunión', color: 'bg-violet-500' },
+  { status: 'ganado', label: 'Ganado', color: 'bg-green-500' },
+]
+
+function FunnelBar({
+  label,
+  count,
+  maxCount,
+  colorClass,
+}: {
+  label: string
+  count: number
+  maxCount: number
+  colorClass: string
+}) {
+  const pct = maxCount > 0 ? Math.round((count / maxCount) * 100) : 0
+  return (
+    <div className="flex items-center gap-3">
+      <span className="w-24 text-xs text-right text-zinc-600 shrink-0">{label}</span>
+      <div className="flex-1 h-6 bg-zinc-100 rounded-sm overflow-hidden">
+        <div
+          className={`h-full rounded-sm transition-all ${colorClass}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <span className="w-16 text-xs tabular-nums text-zinc-500 shrink-0">
+        {count} ({pct}%)
+      </span>
+    </div>
+  )
+}
+
+function stageConversionRate(
+  stageCounts: number[],
+  fromIdx: number,
+): string {
+  // denominator: sum from fromIdx to end (ganado + perdido included via full tail)
+  const denominator = stageCounts.slice(fromIdx).reduce((a, b) => a + b, 0)
+  if (denominator === 0) return '—'
+  const toCount = stageCounts[fromIdx + 1] ?? 0
+  return `${Math.round((toCount / denominator) * 100)}%`
+}
+
+function conversionColor(value: string): string {
+  if (value === '—') return 'text-zinc-400'
+  const n = parseInt(value)
+  if (n >= 40) return 'text-green-600 font-medium'
+  if (n >= 20) return 'text-amber-600 font-medium'
+  return 'text-red-600 font-medium'
+}
+
 function barColor(pct: number): string {
   if (pct >= 100) return 'bg-red-500'
   if (pct >= 80) return 'bg-amber-400'
@@ -110,6 +165,33 @@ export default async function MetricsPage() {
   const now = new Date()
   const monthName = now.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })
 
+  // Funnel metrics
+  const total = allStatuses.reduce((sum, s) => sum + (statusCounts[s] ?? 0), 0)
+  const totalActivos = total - (statusCounts.perdido ?? 0)
+  const tasaCierre = total > 0
+    ? Math.round(((statusCounts.ganado ?? 0) / total) * 100)
+    : 0
+
+  const funnelCounts = FUNNEL_STAGES.map((s) => statusCounts[s.status] ?? 0)
+  const maxFunnelCount = Math.max(...funnelCounts, 1)
+
+  // Stage-to-stage conversion rates (denominator includes perdido for the first two transitions)
+  const allOrderedCounts = [
+    statusCounts.nuevo ?? 0,
+    statusCounts.contactado ?? 0,
+    statusCounts.respondio ?? 0,
+    statusCounts.reunion ?? 0,
+    statusCounts.ganado ?? 0,
+    statusCounts.perdido ?? 0,
+  ]
+
+  const STAGE_TRANSITIONS: { label: string; fromIdx: number }[] = [
+    { label: 'Nuevo → Contactado', fromIdx: 0 },
+    { label: 'Contactado → Respondió', fromIdx: 1 },
+    { label: 'Respondió → Reunión', fromIdx: 2 },
+    { label: 'Reunión → Ganado', fromIdx: 3 },
+  ]
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -130,9 +212,11 @@ export default async function MetricsPage() {
         </div>
       </section>
 
-      {/* Pipeline funnel */}
+      {/* Funnel de ventas */}
       <section className="space-y-4">
-        <h2 className="text-sm font-semibold text-zinc-700 uppercase tracking-wide">Embudo del pipeline</h2>
+        <h2 className="text-sm font-semibold text-zinc-700 uppercase tracking-wide">Funnel de ventas</h2>
+
+        {/* Resumen del pipeline */}
         <div className="flex flex-wrap gap-2">
           {allStatuses.map((s) => (
             <div
@@ -142,6 +226,46 @@ export default async function MetricsPage() {
               {PROSPECT_LABELS[s]}: <span className="tabular-nums">{statusCounts[s] ?? 0}</span>
             </div>
           ))}
+        </div>
+
+        {/* KPI cards */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-lg border border-zinc-200 bg-white p-4 text-center">
+            <p className="text-2xl font-bold text-zinc-900 tabular-nums">{tasaCierre}%</p>
+            <p className="text-xs text-zinc-500 mt-1">Tasa de cierre</p>
+            <p className="text-xs text-zinc-400">(ganados / total)</p>
+          </div>
+          <div className="rounded-lg border border-zinc-200 bg-white p-4 text-center">
+            <p className="text-2xl font-bold text-zinc-900 tabular-nums">{totalActivos}</p>
+            <p className="text-xs text-zinc-500 mt-1">Prospectos activos</p>
+            <p className="text-xs text-zinc-400">(excluye perdidos)</p>
+          </div>
+        </div>
+
+        {/* Barras del funnel */}
+        <div className="rounded-lg border border-zinc-200 bg-white p-4 space-y-3">
+          {FUNNEL_STAGES.map((stage, i) => (
+            <FunnelBar
+              key={stage.status}
+              label={stage.label}
+              count={funnelCounts[i]}
+              maxCount={maxFunnelCount}
+              colorClass={stage.color}
+            />
+          ))}
+        </div>
+
+        {/* Conversión entre etapas */}
+        <div className="rounded-lg border border-zinc-200 bg-white divide-y divide-zinc-100">
+          {STAGE_TRANSITIONS.map((t) => {
+            const rate = stageConversionRate(allOrderedCounts, t.fromIdx)
+            return (
+              <div key={t.label} className="flex items-center justify-between px-4 py-2.5">
+                <span className="text-xs text-zinc-600">{t.label}</span>
+                <span className={`text-xs tabular-nums ${conversionColor(rate)}`}>{rate}</span>
+              </div>
+            )
+          })}
         </div>
       </section>
 

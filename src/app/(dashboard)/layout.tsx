@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { href: '/dashboard', label: 'Cuadrante' },
   { href: '/prospecting', label: 'Prospección' },
   { href: '/pipeline', label: 'Pipeline' },
+  { href: '/mapa', label: 'Mapa' },
   { href: '/metrics', label: 'Métricas' },
   { href: '/herramientas', label: 'Herramientas' },
   { href: '/profile', label: 'Mi perfil' },
