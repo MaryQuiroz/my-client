@@ -1,3 +1,5 @@
+import type { SectorHint } from './sector-hints'
+
 export interface MessagePromptInput {
   businessName: string
   address: string
@@ -9,6 +11,7 @@ export interface MessagePromptInput {
   servicePromise: string | null
   communicationTone: string
   socialProof: string | null
+  sectorHint?: SectorHint | null
 }
 
 const CHANNEL_INSTRUCTIONS: Record<MessagePromptInput['channel'], string> = {
@@ -37,11 +40,16 @@ export function buildMessagePrompt(input: MessagePromptInput): {
     ? `Propuesta de valor: "${input.servicePromise}".`
     : ''
 
+  const sectorClause = input.sectorHint
+    ? `Sector del negocio: ${input.sectorHint.keywords[0]}, con los siguientes puntos de dolor típicos: ${input.sectorHint.painPoints.join(', ')}.`
+    : ''
+
   const system = [
     `Eres un asistente de ventas para ${input.freelancerName || 'un freelancer web'}.`,
     `Servicio ofrecido: ${input.serviceDescription}.`,
     promiseClause,
     proofClause,
+    sectorClause,
     toneClause,
     'REGLA IMPORTANTE: usa ÚNICAMENTE los datos que te proporciono. No inventes nombres de personas, teléfonos, emails, precios, ni ningún otro dato del negocio. Si no tienes un dato, no lo menciones.',
   ]
@@ -53,13 +61,20 @@ export function buildMessagePrompt(input: MessagePromptInput): {
       ? `Problemas web detectados: ${input.firedSignals.join(', ')}.`
       : 'No se han detectado problemas web específicos.'
 
+  const sectorUserClause = input.sectorHint
+    ? `Propuestas de valor relevantes para este sector: ${input.sectorHint.valueProps.join(', ')}. Puedes usar como inspiración (no literalmente): "${input.sectorHint.exampleOpener}".`
+    : ''
+
   const user = [
     `Negocio objetivo: "${input.businessName}"${input.address ? ` (${input.address})` : ''}.`,
     signalsText,
     `Puntuación de oportunidad: ${input.totalScore}/100.`,
+    sectorUserClause,
     CHANNEL_INSTRUCTIONS[input.channel],
     'Escribe solo el mensaje, sin explicaciones adicionales ni comentarios.',
-  ].join('\n')
+  ]
+    .filter(Boolean)
+    .join('\n')
 
   return { system, user }
 }

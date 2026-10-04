@@ -30,6 +30,7 @@ const CHANNEL_LABELS: Record<Channel, string> = {
 
 export default function MessageGenerator({ businessId, scoreId }: MessageGeneratorProps) {
   const [channel, setChannel] = useState<Channel>('whatsapp')
+  const [sectorOverride, setSectorOverride] = useState('')
   const [state, setState] = useState<GenState>({ status: 'idle' })
   const [copied, setCopied] = useState(false)
 
@@ -38,10 +39,13 @@ export default function MessageGenerator({ businessId, scoreId }: MessageGenerat
     setCopied(false)
 
     try {
+      const body: Record<string, unknown> = { businessId, scoreId, channel }
+      if (sectorOverride.trim()) body.sectorOverride = sectorOverride.trim()
+
       const res = await fetch('/api/messages/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ businessId, scoreId, channel }),
+        body: JSON.stringify(body),
       })
 
       const data = await res.json()
@@ -97,6 +101,19 @@ export default function MessageGenerator({ businessId, scoreId }: MessageGenerat
             {CHANNEL_LABELS[c]}
           </button>
         ))}
+      </div>
+
+      {/* Sector override */}
+      <div>
+        <label className="block text-xs text-zinc-500 mb-1">Sector (mejora el mensaje)</label>
+        <input
+          type="text"
+          value={sectorOverride}
+          onChange={(e) => setSectorOverride(e.target.value)}
+          maxLength={50}
+          placeholder="ej. restaurante, peluquería…"
+          className="w-full rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-700 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
+        />
       </div>
 
       {/* Botón generar / gate de cuota */}

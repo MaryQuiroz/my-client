@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 // El componente recibe key={prospect.id} desde el padre — remonta al cambiar prospecto
 import type { ProspectWithBusiness } from '@/lib/kanban/utils'
+import RoiCalculator from '@/components/shared/RoiCalculator'
 
 interface ProspectDetailPanelProps {
   prospect: ProspectWithBusiness
@@ -20,6 +21,7 @@ export default function ProspectDetailPanel({
     prospect.next_contact_at ? prospect.next_contact_at.slice(0, 10) : ''
   )
   const [saving, setSaving] = useState(false)
+  const [showRoi, setShowRoi] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
 
   // Cerrar con Escape
@@ -192,6 +194,28 @@ export default function ProspectDetailPanel({
               className="w-full rounded-md border border-zinc-200 px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 resize-none focus:outline-none focus:ring-2 focus:ring-zinc-900"
             />
             <p className="text-xs text-zinc-400">Se guarda automáticamente al salir del campo.</p>
+          </div>
+
+          {/* Calculador ROI */}
+          <div className="space-y-1.5">
+            <button
+              onClick={() => setShowRoi((v) => !v)}
+              className="flex items-center gap-1.5 text-xs font-semibold text-zinc-600 uppercase tracking-wide w-full hover:text-zinc-900 transition-colors"
+            >
+              <svg className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              Calcular ROI
+              <svg
+                className={`h-3 w-3 ml-auto transition-transform ${showRoi ? 'rotate-180' : ''}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {showRoi && <RoiCalculator compact initialInvestment={1200} />}
           </div>
         </div>
       </div>

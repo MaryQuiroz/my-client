@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { messageRequestSchema } from '@/lib/validations/message'
 import { generateMessage } from '@/lib/messages/generator'
+import { getSectorHint } from '@/lib/messages/sector-hints'
 import { checkQuota } from '@/lib/quota'
 import { captureEvent } from '@/lib/analytics/posthog-server'
 import type { SignalBreakdown } from '@/lib/scoring/scorer'
@@ -41,13 +42,13 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const { businessId, scoreId, channel } = parsed.data
+  const { businessId, scoreId, channel, sectorOverride } = parsed.data
   const admin = createAdminClient()
 
   // 4. Verificar negocio
   const { data: business, error: bizError } = await supabase
     .from('businesses')
-    .select('id, name, address')
+    .select('id, name, address, category')
     .eq('id', businessId)
     .eq('user_id', user.id)
     .single()
@@ -114,6 +115,9 @@ export async function POST(request: NextRequest) {
     .filter((s) => s.fired && s.source !== 'unavailable')
     .map((s) => s.label)
 
+  const categoryForHint = sectorOverride ?? business.category ?? null
+  const sectorHint = getSectorHint(categoryForHint)
+
   let content: string
   try {
     content = await generateMessage(
@@ -128,6 +132,7 @@ export async function POST(request: NextRequest) {
         servicePromise: profile?.service_promise ?? null,
         communicationTone: profile?.communication_tone ?? 'informal',
         socialProof: profile?.social_proof ?? null,
+        sectorHint,
       },
       apiKey
     )

@@ -5,6 +5,7 @@ import { useState } from 'react'
 import SearchForm, { type SearchResult, type QuotaInfo } from '@/components/prospecting/SearchForm'
 import BusinessCard from '@/components/prospecting/BusinessCard'
 import AddManualForm from '@/components/prospecting/AddManualForm'
+import ImportCsvForm from '@/components/prospecting/ImportCsvForm'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import type { QuotaResult } from '@/lib/quota'
@@ -32,6 +33,7 @@ export default function ProspectingClient({ initialSearchQuota }: ProspectingCli
   const [loading, setLoading] = useState(false)
   const [tab, setTab] = useState<Tab>('lista')
   const [hasSearched, setHasSearched] = useState(false)
+  const [importMessage, setImportMessage] = useState<string | null>(null)
 
   function handleResults(data: SearchResult[], q: QuotaInfo) {
     setResults(data)
@@ -61,6 +63,17 @@ export default function ProspectingClient({ initialSearchQuota }: ProspectingCli
       <SearchForm onResults={handleResults} onLoading={setLoading} searchQuota={searchQuota} />
 
       <AddManualForm onAdded={handleManualAdded} />
+
+      <ImportCsvForm onImported={(count) => {
+        setImportMessage(`${count} negocio${count !== 1 ? 's' : ''} importado${count !== 1 ? 's' : ''} al pipeline`)
+        setTimeout(() => setImportMessage(null), 4000)
+      }} />
+
+      {importMessage && (
+        <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800">
+          {importMessage}
+        </div>
+      )}
 
       {loading && (
         <p className="text-sm text-zinc-500 animate-pulse">Buscando negocios…</p>
