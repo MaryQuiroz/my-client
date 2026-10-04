@@ -12,6 +12,7 @@ import {
 } from '@/lib/kanban/utils'
 import KanbanColumn from './KanbanColumn'
 import KanbanCard from './KanbanCard'
+import ProspectDetailPanel from './ProspectDetailPanel'
 
 interface ColumnConfig {
   status: ProspectStatus
@@ -39,12 +40,11 @@ interface KanbanBoardProps {
 }
 
 export default function KanbanBoard({ initialProspects }: KanbanBoardProps) {
-  const [groups, setGroups] = useState<KanbanGroups>(() =>
-    groupByStatus(initialProspects)
-  )
+  const [groups, setGroups] = useState<KanbanGroups>(() => groupByStatus(initialProspects))
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [prevGroups, setPrevGroups] = useState<KanbanGroups | null>(null)
   const [toasts, setToasts] = useState<Toast[]>([])
+  const [selectedProspect, setSelectedProspect] = useState<ProspectWithBusiness | null>(null)
   const toastIdRef = useRef(0)
 
   function showToast(message: string, type: 'success' | 'error') {
@@ -52,6 +52,21 @@ export default function KanbanBoard({ initialProspects }: KanbanBoardProps) {
     const id = toastIdRef.current
     setToasts((prev) => [...prev, { id, message, type }])
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3000)
+  }
+
+  // Actualiza el prospecto en el board cuando se guarda desde el panel
+  function handleProspectUpdate(id: string, changes: Partial<ProspectWithBusiness>) {
+    setGroups((prev) => {
+      const next = { ...prev }
+      for (const status of ALL_STATUSES) {
+        next[status] = prev[status].map((p) =>
+          p.id === id ? { ...p, ...changes } : p
+        )
+      }
+      return next
+    })
+    // Actualizar también el prospecto seleccionado
+    setSelectedProspect((prev) => (prev?.id === id ? { ...prev, ...changes } : prev))
   }
 
   const draggingProspect = draggingId
@@ -65,15 +80,12 @@ export default function KanbanBoard({ initialProspects }: KanbanBoardProps) {
 
   async function handleDragEnd({ active, over }: DragEndEvent) {
     setDraggingId(null)
-
     if (!over) return
 
     const prospectId = String(active.id)
     const toStatus = String(over.id) as ProspectStatus
-
     if (!ALL_STATUSES.includes(toStatus)) return
 
-    // Optimistic update
     const updated = moveProspect(groups, prospectId, toStatus)
     setGroups(updated)
 
@@ -109,7 +121,7 @@ export default function KanbanBoard({ initialProspects }: KanbanBoardProps) {
           {toasts.map((t) => (
             <div
               key={t.id}
-              className={`rounded-lg px-4 py-2.5 text-sm font-medium text-white shadow-lg transition-all ${
+              className={`rounded-lg px-4 py-2.5 text-sm font-medium text-white shadow-lg ${
                 t.type === 'success' ? 'bg-zinc-900' : 'bg-red-600'
               }`}
             >
@@ -118,9 +130,11 @@ export default function KanbanBoard({ initialProspects }: KanbanBoardProps) {
           ))}
         </div>
       )}
+
       <p className="text-sm text-zinc-500 mb-4">
         {total} {total === 1 ? 'prospecto' : 'prospectos'} en total
       </p>
+
       <div className="overflow-x-auto pb-4">
         <DndContext
           onDragStart={handleDragStart}
@@ -136,6 +150,7 @@ export default function KanbanBoard({ initialProspects }: KanbanBoardProps) {
                 color={col.color}
                 prospects={groups[col.status]}
                 draggingId={draggingId}
+                onOpenDetail={setSelectedProspect}
               />
             ))}
           </div>
@@ -149,6 +164,15 @@ export default function KanbanBoard({ initialProspects }: KanbanBoardProps) {
           </DragOverlay>
         </DndContext>
       </div>
+
+      {selectedProspect && (
+        <ProspectDetailPanel
+          key={selectedProspect.id}
+          prospect={selectedProspect}
+          onClose={() => setSelectedProspect(null)}
+          onUpdate={handleProspectUpdate}
+        />
+      )}
     </div>
   )
 }

@@ -11,6 +11,7 @@ interface KanbanColumnProps {
   color: string
   prospects: ProspectWithBusiness[]
   draggingId: string | null
+  onOpenDetail?: (prospect: ProspectWithBusiness) => void
 }
 
 export default function KanbanColumn({
@@ -19,6 +20,7 @@ export default function KanbanColumn({
   color,
   prospects,
   draggingId,
+  onOpenDetail,
 }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: status })
 
@@ -40,7 +42,7 @@ export default function KanbanColumn({
         }`}
       >
         {prospects.map((p) => (
-          <KanbanCard key={p.id} prospect={p} isDragging={p.id === draggingId} />
+          <KanbanCard key={p.id} prospect={p} isDragging={p.id === draggingId} onOpenDetail={onOpenDetail} />
         ))}
         {prospects.length === 0 && !isOver && (
           <p className="text-center text-xs text-zinc-300 py-4">Vacío</p>
