@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { DndContext, DragOverlay, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core'
 import type { ProspectStatus } from '@/types/database'
 import {
@@ -28,6 +28,12 @@ const COLUMNS: ColumnConfig[] = [
   { status: 'perdido', label: 'Perdido', color: 'border-red-400' },
 ]
 
+interface Toast {
+  id: number
+  message: string
+  type: 'success' | 'error'
+}
+
 interface KanbanBoardProps {
   initialProspects: ProspectWithBusiness[]
 }
@@ -38,6 +44,15 @@ export default function KanbanBoard({ initialProspects }: KanbanBoardProps) {
   )
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [prevGroups, setPrevGroups] = useState<KanbanGroups | null>(null)
+  const [toasts, setToasts] = useState<Toast[]>([])
+  const toastIdRef = useRef(0)
+
+  function showToast(message: string, type: 'success' | 'error') {
+    toastIdRef.current += 1
+    const id = toastIdRef.current
+    setToasts((prev) => [...prev, { id, message, type }])
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3000)
+  }
 
   const draggingProspect = draggingId
     ? ALL_STATUSES.flatMap((s) => groups[s]).find((p) => p.id === draggingId) ?? null
@@ -69,9 +84,11 @@ export default function KanbanBoard({ initialProspects }: KanbanBoardProps) {
         body: JSON.stringify({ status: toStatus }),
       })
       if (!res.ok) throw new Error('PATCH failed')
+      const col = COLUMNS.find((c) => c.status === toStatus)
+      showToast(`Movido a ${col?.label ?? toStatus}`, 'success')
     } catch {
-      // Revertir al estado previo
       if (prevGroups) setGroups(prevGroups)
+      showToast('No se pudo guardar el cambio', 'error')
     }
 
     setPrevGroups(null)
@@ -87,6 +104,20 @@ export default function KanbanBoard({ initialProspects }: KanbanBoardProps) {
 
   return (
     <div>
+      {toasts.length > 0 && (
+        <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none">
+          {toasts.map((t) => (
+            <div
+              key={t.id}
+              className={`rounded-lg px-4 py-2.5 text-sm font-medium text-white shadow-lg transition-all ${
+                t.type === 'success' ? 'bg-zinc-900' : 'bg-red-600'
+              }`}
+            >
+              {t.message}
+            </div>
+          ))}
+        </div>
+      )}
       <p className="text-sm text-zinc-500 mb-4">
         {total} {total === 1 ? 'prospecto' : 'prospectos'} en total
       </p>

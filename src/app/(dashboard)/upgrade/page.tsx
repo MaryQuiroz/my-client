@@ -11,11 +11,11 @@ const PLAN_NAMES: Record<PlanId, string> = {
   agency: 'Agencia',
 }
 
-// TODO-LEGAL: Precios finales, condiciones de suscripción e IVA con abogado antes de activar modo live
+// TODO-LEGAL: Confirmar precios, IVA y condiciones de suscripción con abogado antes de activar modo live
 const PLAN_PRICES: Record<PlanId, string> = {
   free: '0 €/mes',
-  pro: '—',
-  agency: '—',
+  pro: '29 €/mes',
+  agency: '79 €/mes',
 }
 
 const FEATURES: { label: string; key: keyof PlanLimits }[] = [
