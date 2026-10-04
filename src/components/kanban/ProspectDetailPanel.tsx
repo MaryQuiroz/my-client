@@ -5,6 +5,9 @@ import { useEffect, useRef, useState } from 'react'
 import type { ProspectWithBusiness } from '@/lib/kanban/utils'
 import RoiCalculator from '@/components/shared/RoiCalculator'
 import ProposalButton from '@/components/kanban/ProposalButton'
+import ProspectTimeline from '@/components/kanban/ProspectTimeline'
+
+type ShareState = 'idle' | 'loading' | 'copied' | 'no_audit' | 'error'
 
 interface ProspectDetailPanelProps {
   prospect: ProspectWithBusiness
@@ -23,7 +26,30 @@ export default function ProspectDetailPanel({
   )
   const [saving, setSaving] = useState(false)
   const [showRoi, setShowRoi] = useState(false)
+  const [shareState, setShareState] = useState<ShareState>('idle')
   const panelRef = useRef<HTMLDivElement>(null)
+
+  async function handleShare() {
+    if (shareState === 'copied') return
+    setShareState('loading')
+    try {
+      const latestRes = await fetch(`/api/audits/latest?businessId=${prospect.business.id}`)
+      if (!latestRes.ok) {
+        setShareState('no_audit')
+        setTimeout(() => setShareState('idle'), 3000)
+        return
+      }
+      const { auditId } = await latestRes.json() as { auditId: string }
+      const shareRes = await fetch(`/api/audits/${auditId}/share`, { method: 'POST' })
+      const data = await shareRes.json() as { url: string }
+      await navigator.clipboard.writeText(window.location.origin + data.url).catch(() => {})
+      setShareState('copied')
+      setTimeout(() => setShareState('idle'), 3000)
+    } catch {
+      setShareState('error')
+      setTimeout(() => setShareState('idle'), 3000)
+    }
+  }
 
   // Cerrar con Escape
   useEffect(() => {
@@ -143,6 +169,24 @@ export default function ProspectDetailPanel({
             )}
           </div>
 
+          {/* Compartir auditoría */}
+          <div>
+            <button
+              onClick={() => void handleShare()}
+              disabled={shareState === 'loading'}
+              className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-800 transition-colors disabled:opacity-50"
+            >
+              <svg className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+              </svg>
+              {shareState === 'loading' ? 'Generando enlace…'
+                : shareState === 'copied' ? '¡Enlace copiado!'
+                : shareState === 'no_audit' ? 'Sin auditoría — genera una primero'
+                : shareState === 'error' ? 'Error al generar enlace'
+                : 'Compartir auditoría'}
+            </button>
+          </div>
+
           {/* Propuesta comercial */}
           <ProposalButton
             businessId={prospect.business.id}
@@ -224,6 +268,9 @@ export default function ProspectDetailPanel({
             </button>
             {showRoi && <RoiCalculator compact initialInvestment={1200} />}
           </div>
+
+          {/* Historial */}
+          <ProspectTimeline prospectId={prospect.id} />
         </div>
       </div>
     </>
